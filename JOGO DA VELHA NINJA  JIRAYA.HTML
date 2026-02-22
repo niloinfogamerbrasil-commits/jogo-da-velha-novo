@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jogo da Velha - NINJA JIRAYA</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            text-align: center; 
+            background: black; 
+            color: lime; 
+        }
+        .titulo { 
+            color: red; 
+            font-size: 20px; 
+        }
+        .tabuleiro { 
+            margin: 20px auto; 
+            width: 300px; 
+        }
+        .linha { 
+            display: flex; 
+        }
+        .celula { 
+            width: 100px; 
+            height: 100px; 
+            border: 2px solid lime; 
+            font-size: 50px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            transition: 0.1s;
+        }
+        .celula:hover { 
+            background: darkgreen; 
+            transform: scale(1.05);
+        }
+        .celula:active {
+            background: yellow;
+            color: black;
+        }
+        .info { 
+            margin: 20px; 
+            font-size: 18px; 
+        }
+        .botao { 
+            background: lime; 
+            color: black; 
+            padding: 10px 20px; 
+            text-decoration: none; 
+            display: inline-block; 
+            margin: 10px; 
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        .botao:hover {
+            background: lightgreen;
+            transform: scale(1.1);
+        }
+        .vez {
+            font-size: 22px;
+            margin: 10px;
+            color: yellow;
+        }
+    </style>
+</head>
+<body>
+
+<div class="titulo">
+    <h1>=== JOGO DA VELHA ===</h1>
+    <h2>CRIADO POR NINJA JIRAYA</h2>
+</div>
+
+<div class="info">
+    <span style="color: cyan;">Jogador 1: X</span> | <span style="color: orange;">Jogador 2: O</span>
+    <div class="vez" id="vez">🎮 Vez do: <span style="color: cyan;">X</span></div>
+</div>
+
+<div class="tabuleiro" id="tabuleiro">
+    <div class="linha">
+        <div class="celula" onclick="jogar(0)">1</div>
+        <div class="celula" onclick="jogar(1)">2</div>
+        <div class="celula" onclick="jogar(2)">3</div>
+    </div>
+    <div class="linha">
+        <div class="celula" onclick="jogar(3)">4</div>
+        <div class="celula" onclick="jogar(4)">5</div>
+        <div class="celula" onclick="jogar(5)">6</div>
+    </div>
+    <div class="linha">
+        <div class="celula" onclick="jogar(6)">7</div>
+        <div class="celula" onclick="jogar(7)">8</div>
+        <div class="celula" onclick="jogar(8)">9</div>
+    </div>
+</div>
+
+<div id="mensagem" style="font-size: 24px; margin: 20px; color: yellow; min-height: 60px;"></div>
+
+<button class="botao" onclick="reiniciar()">🔄 NOVO JOGO</button>
+<button class="botao" onclick="ligarSom()">🔊 SOM: LIGADO</button>
+
+<script>
+let posicoes = [1,2,3,4,5,6,7,8,9];
+let jogadorAtual = "X";
+let vencedor = null;
+let jogadas = 0;
+let somLigado = true;
+let audioCtx = null;
+
+// Inicializa o áudio quando a página carrega
+window.onload = function() {
+    try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+        console.log("Áudio não suportado");
+    }
+};
+
+function ligarSom() {
+    somLigado = !somLigado;
+    let botao = document.getElementsByClassName("botao")[1];
+    if (somLigado) {
+        botao.innerHTML = "🔊 SOM: LIGADO";
+        // Reativa o contexto de áudio se necessário
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    } else {
+        botao.innerHTML = "🔇 SOM: DESLIGADO";
+    }
+}
+
+// Função para tocar som ao clicar
+function tocarClique() {
+    if (!somLigado || !audioCtx) return;
+    
+    try {
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        
+        let oscillator = audioCtx.createOscillator();
+        let gainNode = audioCtx.createGain();
+        
+        oscillator.type = 'sine';
+        // Notas diferentes para cada jogador
+        if (jogadorAtual === "X") {
+            oscillator.frequency.value = 523.25; // Dó - jogador 1
+        } else {
+            oscillator.frequency.value = 659.25; // Mi - jogador 2
+        }
+        
+        gainNode.gain.value = 0.05;
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    } catch (e) {
+        console.log("Erro ao tocar som:", e);
+    }
+}
+
+function tocarCorneta() {
+    if (!somLigado || !audioCtx) return;
+    
+    try {
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        
+        let notas = [523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50];
+        let tempo = 0;
+        
+        notas.forEach((freq, i) => {
+            let oscillator = audioCtx.createOscillator();
+            let gainNode = audioCtx.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.value = freq;
+            
+            gainNode.gain.value = 0.1;
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            let duracao = (i === notas.length - 1) ? 0.8 : 0.3;
+            oscillator.start(audioCtx.currentTime + tempo);
+            oscillator.stop(audioCtx.currentTime + tempo + duracao);
+            
+            tempo += 0.35;
+        });
+    } catch (e) {
+        console.log("Erro na corneta:", e);
+    }
+}
+
+function tocarEmpate() {
+    if (!somLigado || !audioCtx) return;
+    
+    try {
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        
+        let notas = [220.00, 196.00, 174.61];
+        let tempo = 0;
+        
+        notas.forEach((freq, i) => {
+            let oscillator = audioCtx.createOscillator();
+            let gainNode = audioCtx.createGain();
+            
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.value = freq;
+            
+            gainNode.gain.value = 0.1;
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            let duracao = (i === notas.length - 1) ? 0.8 : 0.4;
+            oscillator.start(audioCtx.currentTime + tempo);
+            oscillator.stop(audioCtx.currentTime + tempo + duracao);
+            
+            tempo += 0.45;
+        });
+    } catch (e) {
+        console.log("Erro no empate:", e);
+    }
+}
+
+function jogar(pos) {
+    if (vencedor) return;
+    if (typeof posicoes[pos] === "string") return;
+    
+    // Toca som do clique
+    tocarClique();
+    
+    // Efeito visual do clique
+    let celula = document.getElementsByClassName("celula")[pos];
+    celula.style.backgroundColor = "yellow";
+    celula.style.color = "black";
+    setTimeout(() => {
+        celula.style.backgroundColor = "";
+        celula.style.color = "";
+    }, 100);
+    
+    posicoes[pos] = jogadorAtual;
+    document.getElementsByClassName("celula")[pos].innerHTML = jogadorAtual;
+    jogadas++;
+    
+    verificarVencedor();
+    
+    if (!vencedor && jogadas < 9) {
+        jogadorAtual = jogadorAtual === "X" ? "O" : "X";
+        let cor = jogadorAtual === "X" ? "cyan" : "orange";
+        document.getElementById("vez").innerHTML = `🎮 Vez do: <span style="color: ${cor};">${jogadorAtual}</span>`;
+    }
+}
+
+function verificarVencedor() {
+    const vitorias = [
+        [0,1,2], [3,4,5], [6,7,8],
+        [0,3,6], [1,4,7], [2,5,8],
+        [0,4,8], [2,4,6]
+    ];
+    
+    for (let i = 0; i < vitorias.length; i++) {
+        const [a,b,c] = vitorias[i];
+        if (posicoes[a] === posicoes[b] && posicoes[b] === posicoes[c]) {
+            vencedor = posicoes[a];
+            break;
+        }
+    }
+    
+    if (vencedor) {
+        document.getElementById("vez").innerHTML = "";
+        if (vencedor === "X") {
+            document.getElementById("mensagem").innerHTML = "🏆 JOGADOR 1 (X) VENCEU! 🏆 PARABÉNS! 🎉";
+        } else {
+            document.getElementById("mensagem").innerHTML = "🏆 JOGADOR 2 (O) VENCEU! 🏆 PARABÉNS! 🎉";
+        }
+        tocarCorneta();
+        
+        // Piscar as células vencedoras
+        for (let i = 0; i < vitorias.length; i++) {
+            const [a,b,c] = vitorias[i];
+            if (posicoes[a] === vencedor && posicoes[b] === vencedor && posicoes[c] === vencedor) {
+                let celulas = document.getElementsByClassName("celula");
+                celulas[a].style.backgroundColor = "gold";
+                celulas[b].style.backgroundColor = "gold";
+                celulas[c].style.backgroundColor = "gold";
+                break;
+            }
+        }
+        
+    } else if (jogadas === 9) {
+        document.getElementById("mensagem").innerHTML = "🤝 DEU VELHA! 🤝 Ninguém ganhou!";
+        tocarEmpate();
+    }
+}
+
+function reiniciar() {
+    posicoes = [1,2,3,4,5,6,7,8,9];
+    jogadorAtual = "X";
+    vencedor = null;
+    jogadas = 0;
+    document.getElementById("vez").innerHTML = `🎮 Vez do: <span style="color: cyan;">X</span>`;
+    document.getElementById("mensagem").innerHTML = "";
+    
+    let celulas = document.getElementsByClassName("celula");
+    for (let i = 0; i < celulas.length; i++) {
+        celulas[i].innerHTML = i + 1;
+        celulas[i].style.backgroundColor = "";
+        celulas[i].style.color = "";
+    }
+}
+</script>
+
+</body>
+</html>
